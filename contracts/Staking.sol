@@ -10,15 +10,48 @@ contract Staking is AccessControl {
     IERC20 public rewardsToken;
     IERC20 public stakingToken;
 
-    uint256 public rewardRate = 10; // 10 minutes
+    uint256 private rewardRate = 10; 
+    uint256 private rewardTime = 600;
+    uint256 private claimTime = 1200;
 
     uint256 private _totalSupply;
 
     mapping(address => uint256) public rewards;
     mapping(address => uint256) private _balances;
 
+    function getRewardsToken() external view returns(IERC20) {
+        return rewardsToken;
+    }
+
+    function getStakingToken() external view returns(IERC20) {
+        return stakingToken;
+    }
+
+    function getTotalSupply() external view returns(uint) {
+        return _totalSupply;
+    }
+
+    function getRewardRate() external view returns(uint) {
+        return rewardRate;
+    }
+
+    function setRewardRate(uint _newRate) external onlyRole(ADMIN_ROLE) {
+        rewardRate = _newRate;
+    }
+
+    function getRewardTime() external view returns(uint) {
+        return rewardTime;
+    }
+
+    function setRewardTime(uint _newTime) external onlyRole(ADMIN_ROLE) {
+        rewardTime = _newTime;
+    }
+
+     function balanceOf(address _account) external view returns(uint){
+        return _balances[_account];
+    }
+
     constructor(address _stakingToken, address _rewardsToken) {
-        // _mint(msg.sender, initialSupply); не забудь передать initialSupply в конструкторе
         _setupRole(ADMIN_ROLE, msg.sender);
         stakingToken = IERC20(_stakingToken);
         rewardsToken = IERC20(_rewardsToken);

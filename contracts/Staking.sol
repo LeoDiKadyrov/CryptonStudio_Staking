@@ -21,6 +21,8 @@ contract Staking is AccessControl {
     mapping(address => uint256) private _balances;
     mapping(address => uint256) private _stakingTime;
 
+    event Staked(address indexed user, uint256 amount);
+
     function getRewardsToken() external view returns(IERC20) {
         return rewardsToken;
     }
@@ -54,9 +56,9 @@ contract Staking is AccessControl {
     }
 
     constructor(address _stakingToken, address _rewardsToken) {
-        _setupRole(ADMIN_ROLE, msg.sender);
         stakingToken = IERC20(_stakingToken);
         rewardsToken = IERC20(_rewardsToken);
+        _setupRole(ADMIN_ROLE, msg.sender);
     }
     
     modifier updateReward(address account) {
@@ -71,24 +73,24 @@ contract Staking is AccessControl {
     }
 
      function stake(uint256 _amount) external updateReward(msg.sender) {
+        require(_amount > 0, "Cannot stake nothing");
         _totalSupply += _amount;
         _balances[msg.sender] += _amount;
         _stakingTime[msg.sender] = block.timestamp;
         stakingToken.transferFrom(msg.sender, address(this), _amount);
-        // emit event maybe?
+        emit Staked(msg.sender, _amount);
      }
 
      function unstake(uint256 _amount) external updateReward(msg.sender) {
+        require(_amount > 0, "Cannot stake nothing");
         _totalSupply -= _amount;
         _balances[msg.sender] -= _amount;
         stakingToken.transfer(msg.sender, _amount);
-        // emit event maybe?
      }
 
      function claim() external updateReward(msg.sender) {
         uint256 reward = rewards[msg.sender];
         rewards[msg.sender] = 0;
         rewardsToken.transfer(msg.sender, reward);
-        // emit event maybe?
     }
 }

@@ -9,6 +9,7 @@ contract Staking is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     IERC20 public rewardsToken;
     IERC20 public stakingToken;
+    uint256 public lastUpdateTime;
 
     uint256 private rewardRate = 10; 
     uint256 private rewardTime = 600;
@@ -18,6 +19,7 @@ contract Staking is AccessControl {
 
     mapping(address => uint256) public rewards;
     mapping(address => uint256) private _balances;
+    mapping(address => uint256) private _stakingTime;
 
     function getRewardsToken() external view returns(IERC20) {
         return rewardsToken;
@@ -47,7 +49,7 @@ contract Staking is AccessControl {
         rewardTime = _newTime;
     }
 
-     function balanceOf(address _account) external view returns(uint){
+    function balanceOf(address _account) external view returns(uint){
         return _balances[_account];
     }
 
@@ -56,22 +58,34 @@ contract Staking is AccessControl {
         stakingToken = IERC20(_stakingToken);
         rewardsToken = IERC20(_rewardsToken);
     }
+    
+    modifier updateReward(address account) {
+        lastUpdateTime = block.timestamp;
+        rewards[account] += earned(account);
+        _;
+    }
 
-     function stake(uint256 _amount) external {
+    function earned(address account) public view returns (uint) {
+        uint rewardForAccount = _balances[account] / 100 * rewardRate;
+        return ((lastUpdateTime - _stakingTime[account]) / rewardTime * rewardForAccount);
+    }
+
+     function stake(uint256 _amount) external updateReward(msg.sender) {
         _totalSupply += _amount;
         _balances[msg.sender] += _amount;
+        _stakingTime[msg.sender] = block.timestamp;
         stakingToken.transferFrom(msg.sender, address(this), _amount);
         // emit event maybe?
      }
 
-     function unstake(uint256 _amount) external {
+     function unstake(uint256 _amount) external updateReward(msg.sender) {
         _totalSupply -= _amount;
         _balances[msg.sender] -= _amount;
         stakingToken.transfer(msg.sender, _amount);
         // emit event maybe?
      }
 
-     function claim() external {
+     function claim() external updateReward(msg.sender) {
         uint256 reward = rewards[msg.sender];
         rewards[msg.sender] = 0;
         rewardsToken.transfer(msg.sender, reward);

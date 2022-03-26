@@ -51,6 +51,10 @@ contract Staking is AccessControl {
         rewardTime = _newTime;
     }
 
+    function getClaimTime() external view returns(uint) {
+        return claimTime;
+    }
+
     function balanceOf(address _account) external view returns(uint){
         return _balances[_account];
     }

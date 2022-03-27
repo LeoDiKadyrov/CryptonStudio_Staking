@@ -78,8 +78,13 @@ contract Staking is AccessControl {
     }
     
     modifier updateReward(address _account) {
-        setLastUpdateTime();
         rewards[_account] += earned(_account);
+        _;
+    }
+
+    modifier checkStakingTime(address _account) {
+        setLastUpdateTime();
+        require(_stakingTime[_account] < lastUpdateTime, "Staking time is still not ended");
         _;
     }
 
@@ -97,14 +102,14 @@ contract Staking is AccessControl {
         emit Staked(msg.sender, _amount);
      }
 
-     function unstake(uint _amount) external updateReward(msg.sender) {
+     function unstake(uint _amount) external checkStakingTime(msg.sender) {
         require(_amount > 0, "Cannot stake nothing");
         _totalSupply -= _amount;
         _balances[msg.sender] -= _amount;
         stakingToken.transfer(msg.sender, _amount);
      }
 
-     function claim() external updateReward(msg.sender) {
+     function claim() external checkStakingTime(msg.sender) {
         uint reward = rewards[msg.sender];
         rewards[msg.sender] = 0;
         rewardsToken.transfer(msg.sender, reward);

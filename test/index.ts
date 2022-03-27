@@ -65,20 +65,11 @@ describe("Staking Token", function () {
     beforeEach(async () => {
       tokenBalanceBefore = await stakingToken.balanceOf(staking.address);
       balanceBefore = await stakingToken.balanceOf(owner.address);
-
-      await stakingToken.approve(staking.address, 0, 1000);
-      await staking.stake(100);
-
-      tokenBalanceAfter = await stakingToken.balanceOf(staking.address);
-      balanceAfter = await stakingToken.balanceOf(owner.address);
     });
 
     it("Shouldn't stake without approve", async () => {
-      await stakingToken.approve(staking.address, 1000, 0);
-      await stakingToken.transfer(owner.address, 1000);
-      await rewardToken.transfer(staking.address, 1000);
-      const tx = staking.connect(owner).stake(1000);
-      await expect(tx).to.be.revertedWith('Not enough allowance');
+      await stakingToken.approve(staking.address, 0, 10);
+      await expect(staking.stake(11)).to.be.revertedWith('Not enough allowance');
     });
 
     it("If amount of staking is 0 - revert", async () => {
@@ -86,15 +77,32 @@ describe("Staking Token", function () {
     });
 
     it("Stake should change totalSupply", async () => {
-      expect(await staking.getTotalSupply()).to.eq(100);
+      await stakingToken.approve(staking.address, 0, 10);
+      await staking.stake(10);
+      expect(await staking.getTotalSupply()).to.eq(10);
     });
 
     it("StakingToken balance should increase", async () => {
-      expect(tokenBalanceBefore.add(100)).to.eq(tokenBalanceAfter);
+      await stakingToken.approve(staking.address, 0, 10);
+      await staking.stake(10);
+      tokenBalanceAfter = await stakingToken.balanceOf(staking.address);
+      expect(tokenBalanceBefore.add(10)).to.eq(tokenBalanceAfter);
     });
 
     it("balance increased", async () => {
-      expect(balanceBefore.sub(100)).to.eq(balanceAfter);
+      await stakingToken.approve(staking.address, 0, 10);
+      await staking.stake(10);
+      balanceAfter = await stakingToken.balanceOf(owner.address);
+      expect(balanceBefore.sub(10)).to.eq(balanceAfter);
+    });
+
+    it("Started time fixed", async () => {
+      await stakingToken.approve(staking.address, 0, 10);
+      await staking.stake(10);
+      const stakingTime = await staking.getStakingTime(owner.address);
+      const blockNumber = await ethers.provider.getBlockNumber();
+      const time = (await ethers.provider.getBlock(blockNumber)).timestamp;
+      expect(time + 1200).to.eq(stakingTime);
     });
 
   });

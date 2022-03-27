@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.11;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,19 +9,19 @@ contract Staking is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     IERC20 public rewardsToken;
     IERC20 public stakingToken;
-    uint256 public lastUpdateTime;
+    uint private lastUpdateTime;
 
-    uint256 private rewardRate = 10; 
-    uint256 private rewardTime = 600;
-    uint256 private claimTime = 1200;
+    uint private rewardRate = 10; 
+    uint private rewardTime = 600;
+    uint private claimTime = 1200;
 
-    uint256 private _totalSupply;
+    uint private _totalSupply;
 
-    mapping(address => uint256) public rewards;
-    mapping(address => uint256) private _balances;
-    mapping(address => uint256) private _stakingTime;
+    mapping(address => uint) public rewards;
+    mapping(address => uint) private _balances;
+    mapping(address => uint) private _stakingTime;
 
-    event Staked(address indexed user, uint256 amount);
+    event Staked(address indexed user, uint amount);
 
     function getRewardsToken() external view returns(IERC20) {
         return rewardsToken;
@@ -55,8 +55,20 @@ contract Staking is AccessControl {
         return claimTime;
     }
 
+    function getStakingTime(address _account) external view returns(uint) {
+        return _stakingTime[_account];
+    }
+
     function balanceOf(address _account) external view returns(uint){
         return _balances[_account];
+    }
+
+    function getLastUpdateTime() external view returns(uint){
+        return lastUpdateTime;
+    }
+
+    function setLastUpdateTime() public {
+        lastUpdateTime = block.timestamp;
     }
 
     constructor(address _stakingToken, address _rewardsToken) {
@@ -65,27 +77,27 @@ contract Staking is AccessControl {
         _setupRole(ADMIN_ROLE, msg.sender);
     }
     
-    modifier updateReward(address account) {
-        lastUpdateTime = block.timestamp;
-        rewards[account] += earned(account);
+    modifier updateReward(address _account) {
+        setLastUpdateTime();
+        rewards[_account] += earned(_account);
         _;
     }
 
-    function earned(address account) public view returns (uint) {
-        uint rewardForAccount = _balances[account] / 100 * rewardRate;
-        return ((lastUpdateTime - _stakingTime[account]) / rewardTime * rewardForAccount);
+    function earned(address _account) public view returns (uint) {
+        uint rewardForAccount = _balances[_account] / 100 * rewardRate;
+        return ((lastUpdateTime - _stakingTime[_account]) / rewardTime * rewardForAccount);
     }
 
-     function stake(uint256 _amount) external updateReward(msg.sender) {
+     function stake(uint _amount) external updateReward(msg.sender) {
         require(_amount > 0, "Cannot stake nothing");
         _totalSupply += _amount;
         _balances[msg.sender] += _amount;
-        _stakingTime[msg.sender] = block.timestamp;
+        _stakingTime[msg.sender] = claimTime + block.timestamp;
         stakingToken.transferFrom(msg.sender, address(this), _amount);
         emit Staked(msg.sender, _amount);
      }
 
-     function unstake(uint256 _amount) external updateReward(msg.sender) {
+     function unstake(uint _amount) external updateReward(msg.sender) {
         require(_amount > 0, "Cannot stake nothing");
         _totalSupply -= _amount;
         _balances[msg.sender] -= _amount;
@@ -93,7 +105,7 @@ contract Staking is AccessControl {
      }
 
      function claim() external updateReward(msg.sender) {
-        uint256 reward = rewards[msg.sender];
+        uint reward = rewards[msg.sender];
         rewards[msg.sender] = 0;
         rewardsToken.transfer(msg.sender, reward);
     }

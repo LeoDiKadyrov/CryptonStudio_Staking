@@ -17,7 +17,7 @@ contract Staking is AccessControl {
 
     uint private _totalSupply;
 
-    mapping(address => uint) public rewards;
+    mapping(address => uint) private _rewards;
     mapping(address => uint) private _balances;
     mapping(address => uint) private _stakingTime;
 
@@ -78,7 +78,7 @@ contract Staking is AccessControl {
     }
     
     modifier updateReward(address _account) {
-        rewards[_account] += earned(_account);
+        _rewards[_account] += earned(_account);
         _;
     }
 
@@ -95,23 +95,23 @@ contract Staking is AccessControl {
 
      function stake(uint _amount) external updateReward(msg.sender) {
         require(_amount > 0, "Cannot stake nothing");
+        stakingToken.transferFrom(msg.sender, address(this), _amount);
         _totalSupply += _amount;
         _balances[msg.sender] += _amount;
         _stakingTime[msg.sender] = claimTime + block.timestamp;
-        stakingToken.transferFrom(msg.sender, address(this), _amount);
         emit Staked(msg.sender, _amount);
      }
 
      function unstake(uint _amount) external checkStakingTime(msg.sender) {
-        require(_amount > 0, "Cannot stake nothing");
+        require(_amount > 0, "Cannot unstake nothing");
+        stakingToken.transfer(msg.sender, _amount);
         _totalSupply -= _amount;
         _balances[msg.sender] -= _amount;
-        stakingToken.transfer(msg.sender, _amount);
      }
 
-     function claim() external checkStakingTime(msg.sender) {
-        uint reward = rewards[msg.sender];
-        rewards[msg.sender] = 0;
+     function claim() external updateReward(msg.sender) checkStakingTime(msg.sender) {
+        uint reward = _rewards[msg.sender];
+        _rewards[msg.sender] = 0;
         rewardsToken.transfer(msg.sender, reward);
     }
 }

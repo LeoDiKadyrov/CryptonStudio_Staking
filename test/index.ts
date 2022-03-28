@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { expect } from "chai";
 import { KadyrovToken, Staking, KadyrovToken__factory, Staking__factory } from "../typechain"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -139,5 +139,49 @@ describe("Staking Token", function () {
     it("Should decrease totalSupply", async () => {
       expect(totalSupplyAfter.add(amount)).to.eq(totalSupplyBefore);
     });
+
+    it("Should revert when amount is zero", async () => {
+      let tx = staking.connect(addr1).unstake(0);
+      expect(tx).to.be.revertedWith("Cannot unstake nothing")
+    });
+
+    it("Should revert if stakingTime is still not ended", async () => {
+      await stakingToken.transfer(staking.address, amount);
+      await stakingToken.approve(staking.address, 0, amount);
+      await staking.stake(amount);
+      
+      const tx = staking.unstake(amount);
+      expect(tx).to.be.revertedWith("Staking time is still not ended")
+    });
+
   });
+
+  describe("Claim", () => {
+    let amount : number = 10;
+    let time : number = 1800;
+    let rewardBalanceBefore: BigNumber;
+    let rewardBalanceAfter: BigNumber;
+    let expectedBalance: BigNumber;
+    let earnedTokens: BigNumber;
+
+    it("Claim should change balanceOf token right", async () => {
+      rewardToken.transfer(staking.address, amount * 10);
+
+      await stakingToken.approve(staking.address, 0, amount);
+      await staking.stake(amount);
+
+      await ethers.provider.send("evm_increaseTime", [time]);
+      await staking.setLastUpdateTime();
+
+      earnedTokens = await staking.earned(owner.address);
+
+      rewardBalanceBefore = await rewardToken.balanceOf(owner.address);
+      await staking.claim();
+      rewardBalanceAfter = await rewardToken.balanceOf(owner.address);
+      expectedBalance = rewardBalanceAfter.sub(rewardBalanceBefore);
+      expect(earnedTokens).to.eq(expectedBalance);
+    });
+
+  });
+
 });

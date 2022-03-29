@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity 0.8.13;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract KadyrovToken is AccessControl {
-    string public name = "KadyrovToken";
-    string public symbol = "KDVT";
+    string public name = "RewardToken";
+    string public symbol = "KDVRWT";
     uint8 public decimals = 18;
     uint256 public totalSupply = 1000000000;
 

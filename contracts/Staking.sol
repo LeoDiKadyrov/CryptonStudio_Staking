@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.11;
+pragma solidity 0.8.13;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -111,7 +111,7 @@ contract Staking is AccessControl {
 
      function claim() external updateReward(msg.sender) checkStakingTime(msg.sender) {
         uint reward = _rewards[msg.sender];
-        _rewards[msg.sender] = 0;
+        _rewards[msg.sender] = 0;   
         rewardsToken.transfer(msg.sender, reward);
     }
 }

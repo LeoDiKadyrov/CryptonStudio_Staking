@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 
-const contractAddress = "0x164ec64b5dF3B804547FE08413431268dd9160ca";
+const contractAddress = "0x42a37754a6f0fD927907bA831a11C56FF94f7266";
 
 task("stake", "Stake your tokens")
   .addParam("amount", "Amount of token to stake")

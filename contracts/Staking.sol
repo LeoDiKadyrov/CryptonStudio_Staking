@@ -4,8 +4,10 @@ pragma solidity 0.8.13;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
 contract Staking is AccessControl {
+    IUniswapV2Router02 public immutable uniswapV2Router;
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     IERC20 public rewardsToken;
     IERC20 public stakingToken;
@@ -75,6 +77,8 @@ contract Staking is AccessControl {
         stakingToken = IERC20(_stakingToken);
         rewardsToken = IERC20(_rewardsToken);
         _setupRole(ADMIN_ROLE, msg.sender);
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        uniswapV2Router = _uniswapV2Router;
     }
     
     modifier updateReward(address _account) {
@@ -113,5 +117,18 @@ contract Staking is AccessControl {
         uint reward = _rewards[msg.sender];
         _rewards[msg.sender] = 0;   
         rewardsToken.transfer(msg.sender, reward);
+    }
+
+     function _addLiquidity(uint256 _firstTokenAmount, uint256 _secondTokenAmount) external onlyRole(ADMIN_ROLE) {
+        uniswapV2Router.addLiquidity(
+            0x4A4fD2AF4A488eDB230d66CA18aA82c2AcB19ADc,
+            0xBF3826716185ec2389ca4a226De6365E1783a387,
+            _firstTokenAmount,      
+            _secondTokenAmount,
+            0, 
+            0, 
+            address(this),
+            block.timestamp
+        );
     }
 }

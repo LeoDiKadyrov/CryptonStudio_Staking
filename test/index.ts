@@ -1,20 +1,36 @@
 import { ethers, network } from "hardhat";
 import { expect } from "chai";
-import { KadyrovToken, Staking, KadyrovToken__factory, Staking__factory } from "../typechain"
+import { Staking, Staking__factory} from "../typechain"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber } from "ethers";
+import { BigNumber, Contract } from "ethers";
 
 describe("Staking Token", function () {
-  let stakingToken: KadyrovToken;
-  let rewardToken: KadyrovToken;
+  const initialTokenBalance: BigNumber = ethers.utils.parseUnits("100000000", 18);
+  let stakingToken: Contract
+  let rewardToken: Contract;
   let staking: Staking;
   let owner : SignerWithAddress;
   let addr1 : SignerWithAddress;
 
+  before(async function () {
+    const TokenA = await ethers.getContractFactory("ERC20Token");
+    stakingToken = await TokenA.deploy(
+      "StakingToken",
+      "STK",
+      initialTokenBalance
+    );
+
+    const TokenB = await ethers.getContractFactory("ERC20Token");
+    rewardToken = await TokenB.deploy(
+      "RewardToken",
+      "REW",
+      initialTokenBalance
+    );
+
+  });
+
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
-    stakingToken = await new KadyrovToken__factory(owner).deploy();
-    rewardToken = await new KadyrovToken__factory(owner).deploy();
     staking = await new Staking__factory(owner).deploy(
       stakingToken.address,
       rewardToken.address
@@ -71,8 +87,8 @@ describe("Staking Token", function () {
     });
 
     it("Shouldn't stake without approve", async () => {
-      await stakingToken.approve(staking.address, 0, amount);
-      await expect(staking.stake(11)).to.be.revertedWith('Not enough allowance');
+      await stakingToken.approve(staking.address, amount);
+      await expect(staking.stake(11)).to.be.revertedWith('ERC20: insufficient allowance');
     });
 
     it("If amount of staking is 0 - revert", async () => {
@@ -80,27 +96,27 @@ describe("Staking Token", function () {
     });
 
     it("Stake should change totalSupply", async () => {
-      await stakingToken.approve(staking.address, 0, amount);
+      await stakingToken.approve(staking.address, amount);
       await staking.stake(amount);
       expect(await staking.getTotalSupply()).to.eq(amount);
     });
 
     it("StakingToken balance should increase", async () => {
-      await stakingToken.approve(staking.address, 0, amount);
+      await stakingToken.approve(staking.address, amount);
       await staking.stake(amount);
       tokenBalanceAfter = await stakingToken.balanceOf(staking.address);
       expect(tokenBalanceBefore.add(10)).to.eq(tokenBalanceAfter);
     });
 
     it("balance increased", async () => {
-      await stakingToken.approve(staking.address, 0, amount);
+      await stakingToken.approve(staking.address, amount);
       await staking.stake(amount);
       balanceAfter = await stakingToken.balanceOf(owner.address);
       expect(balanceBefore.sub(10)).to.eq(balanceAfter);
     });
 
     it("Started time fixed", async () => {
-      await stakingToken.approve(staking.address, 0, amount);
+      await stakingToken.approve(staking.address, amount);
       await staking.stake(amount);
       const stakingTime = await staking.getStakingTime(owner.address);
       const blockNumber = await ethers.provider.getBlockNumber();
@@ -119,7 +135,7 @@ describe("Staking Token", function () {
 
     beforeEach(async () => {
       await stakingToken.transfer(staking.address, amount);
-      await stakingToken.approve(staking.address, 0, amount);
+      await stakingToken.approve(staking.address, amount);
       await staking.stake(amount);
       await ethers.provider.send("evm_increaseTime", [1800]);
 
@@ -147,7 +163,7 @@ describe("Staking Token", function () {
 
     it("Should revert if stakingTime is still not ended", async () => {
       await stakingToken.transfer(staking.address, amount);
-      await stakingToken.approve(staking.address, 0, amount);
+      await stakingToken.approve(staking.address, amount);
       await staking.stake(amount);
       
       const tx = staking.unstake(amount);
@@ -167,7 +183,7 @@ describe("Staking Token", function () {
     it("Claim should change balanceOf token right", async () => {
       rewardToken.transfer(staking.address, amount * 10);
 
-      await stakingToken.approve(staking.address, 0, amount);
+      await stakingToken.approve(staking.address, amount);
       await staking.stake(amount);
 
       await ethers.provider.send("evm_increaseTime", [time]);
